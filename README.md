@@ -1,8 +1,9 @@
+
 # Mutual TLS using ASP.NET Core
 
 ASP.NET Core example for working in a mTLS (2-way-SSL) project.
 
-## Server configuration
+## Server configuration [ MutualTLS.API ]
 
 Inside of `Program.cs`, configure `ClientCertificateMode` to `RequireCertificate`.
 ```csharp
@@ -64,4 +65,48 @@ At last, please add Authenticatino and Authorization to `Startup.cs` in `Configu
 ```csharp
 app.UseAuthentication();
 app.UseAuthorization();
+```
+## Client [ MutualTLS.Client ]
+
+First of all, you need to create a certificate. You can use openssl to do so:
+```chsarp
+openssl req -x509 -sha256 -nodes -newkey rsa:2048 -days 365 -keyout localhost-mtls.key -out localhost-mtls.crt
+```
+
+**Note**: You need to install the public key (`.crt` file) in the server trust store.
+
+Transform `.crt` and `.key` file to a `.pfx` file. 
+```
+openssl pkcs12 -export -out localhost-mtls.pfx -inkey localhost-mtls.key -in localhost-mtls.crt
+```
+
+Include the `.pfx` file in your project or add it to your key vault.
+
+To use the certificate inside your request, you could create a `Client` and reuse it for all the requests. This client will encapsulate the certificate. In this case I created a very  dummy client as an example `ClientWithCertificate.cs`
+```csharp
+public ClientWithCertificate()
+{
+    _client = new RestClient("https://localhost:5001");
+    
+    // Get the certificate from a file or from Key vault
+    var currentDirectory = Directory.GetCurrentDirectory();
+    var pfx = $"{currentDirectory}\\Certificates\\localhost-mtls.pfx";
+    var cert = new X509Certificate2(pfx);
+
+	// Add the certificate in the client
+    _client.ClientCertificates = new X509CertificateCollection { cert };
+}
+```
+That would be all.
+
+**Server logs:**
+```
+info: MutualTLS.API.Controllers.MTLSController[0]
+      [GET /MTLS] - Called by: LOCALHOST MTLS
+```
+
+**Client logs:**
+```
+With Certificate: Status code OK
+Without Certificate: Status code 0
 ```
