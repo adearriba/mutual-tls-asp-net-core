@@ -24,6 +24,11 @@ namespace MutualTLS.API.Controllers
         [HttpGet]
         public IActionResult Get()
         {
+            var method = HttpContext.Request.Method;
+            var path = HttpContext.Request.Path;
+
+            _logger.LogInformation($"[{method} {path}] - Called by: {HttpContext.User.Identity.Name}");
+
             var claims = HttpContext.User.Claims
                 .Select(claim => new KeyValuePair<string, string>(claim.Type, claim.Value)); 
 
